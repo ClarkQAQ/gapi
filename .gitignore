@@ -1,0 +1,11 @@
+/.env
+.vscode/*
+!.vscode/example
+
+# go files
+debug.test
+
+/example_test
+/example_test.go
+
+/go.sum
