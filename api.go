@@ -18,11 +18,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-const (
-	HeaderContentType     = "Content-Type"
-	HeaderContentEncoding = "Content-Encoding"
-)
-
 var (
 	ErrStatusNotOk = errors.New("request: status code is not ok (>= 400)")
 	emptyGJSON     = gjson.Result{}
@@ -46,7 +41,7 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 
 	// 判断是否是URL, 如果是URL就执行URL的方式
 	u := p.EndpointPATH(api.URL, api.Values)
-	if api.URL != "" {
+	if strings.Contains(api.URL, "://") {
 		u, e = p.EndpointURL(api.URL, api.Values)
 		if e != nil {
 			return nil, e
@@ -56,7 +51,7 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
 
-	resp, e := p.Request(ctx, http.MethodHead, u.String(), func(c *http.Client, req *http.Request) error {
+	resp, e := p.Request(ctx, api.Method, u.String(), func(c *http.Client, req *http.Request) error {
 		// 设置请求头
 		if api.Headers != nil && len(api.Headers) > 0 {
 			for k, v := range api.Headers {
@@ -90,19 +85,21 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 		Response: resp,
 	}
 
-	if api.RespHijack != nil {
-		if api.RespHijack(resp, func(body []byte) ([]byte, error) {
-			if body != nil {
-				b, e := ioutil.ReadAll(resp.Body)
-				if e != nil {
-					return nil, e
-				}
+	b, e := ioutil.ReadAll(resp.Body)
+	if e != nil {
+		return nil, e
+	}
 
-				body = b
+	presp.raw = bytes.NewBuffer(b)
+	defer resp.Body.Close()
+
+	if api.RespHijack != nil {
+		if e := api.RespHijack(resp, func(body []byte) []byte {
+			if body != nil {
+				presp.raw = bytes.NewBuffer(body)
 			}
 
-			resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-			return body, nil
+			return presp.raw.Bytes()
 		}); e != nil {
 			return nil, e
 		}
@@ -113,21 +110,8 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 
 // 返回原始的响应内容
 // 可以多次调用
-func (r *PixivResponse) Raw() ([]byte, error) {
-	if r.raw != nil {
-		return r.raw.Bytes(), nil
-	}
-
-	b, err := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-
-	if err != nil {
-		return nil, err
-	}
-
-	r.raw = bytes.NewBuffer(b)
-
-	return b, nil
+func (r *PixivResponse) Raw() []byte {
+	return r.raw.Bytes()
 }
 
 // 获取响应内容
@@ -137,12 +121,9 @@ func (r *PixivResponse) Content() ([]byte, error) {
 		return r.content, nil
 	}
 
-	rawBytes, e := r.Raw()
-	if e != nil {
-		return nil, e
-	}
-
+	rawBytes := r.Raw()
 	var reader io.ReadCloser
+	var e error
 
 	switch r.Header.Get(HeaderContentEncoding) {
 	case "gzip":

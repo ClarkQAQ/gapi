@@ -41,13 +41,15 @@ func (p *Pixiv) EndpointURL(urlString string, values url.Values) (*url.URL, erro
 // 并且有一个ref可以设置自定义选项然后通过client.Do()来发送请求
 // 将返回原始的http.Response
 func (p *Pixiv) Request(ctx context.Context, method, url string, hijack func(c *http.Client, req *http.Request) error) (*http.Response, error) {
-	req, e := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, e := http.NewRequestWithContext(ctx, method, url, nil)
 	if e != nil {
 		return nil, e
 	}
 
 	cp := *p.c
 	c := &cp
+
+	req.Header.Set(HeaderUserAgent, p.userAgent)
 
 	if hijack != nil {
 		if e = hijack(c, req); e != nil {

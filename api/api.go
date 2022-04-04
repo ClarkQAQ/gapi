@@ -14,7 +14,7 @@ type PixivApi struct {
 	Body       []byte
 	Error      error
 	Hijack     func(c *http.Client, req *http.Request) error
-	RespHijack func(resp *http.Response, respBody func(b []byte) ([]byte, error)) error
+	RespHijack func(resp *http.Response, respBody func(b []byte) []byte) error
 }
 
 // 新建Pixiv接口
@@ -35,6 +35,6 @@ func (a *PixivApi) SetHijack(hijack func(c *http.Client, req *http.Request) erro
 	a.Hijack = hijack
 }
 
-func (a *PixivApi) SetRespHijack(hijack func(resp *http.Response, respBody func(b []byte) ([]byte, error)) error) {
+func (a *PixivApi) SetRespHijack(hijack func(resp *http.Response, respBody func(b []byte) []byte) error) {
 	a.RespHijack = hijack
 }
