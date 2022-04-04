@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	p, e := gpixiv.NewClient(&gpixiv.Options{
+	p, e := gpixiv.New(&gpixiv.Options{
 		ProxyURL: "socks5://127.0.0.1:7891",
 	})
 	if e != nil {
@@ -16,7 +16,7 @@ func main() {
 
 	p.SetPHPSESSID("PHPSESSID")
 
-	fmt.Println(p.IsLoggedIn())
+	fmt.Println(p.IsLogged())
 
 	b, e := p.GetPximg("https://i.pximg.net/c/250x250_80_a2/custom-thumb/img/2022/03/29/22/23/35/97265461_p0_custom1200.jpg")
 	if e != nil {

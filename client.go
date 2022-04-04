@@ -10,6 +10,7 @@ import (
 )
 
 // 生成URL
+// 提供Pixiv站点的path和参数返回完整的URL
 func (p *Pixiv) EndpointURL(url string, values url.Values) *url.URL {
 	u := *p.pixivURL
 	u.Path = url
@@ -21,22 +22,32 @@ func (p *Pixiv) EndpointURL(url string, values url.Values) *url.URL {
 	return &u
 }
 
-func (p *Pixiv) Request(ctx context.Context, method, url string, ref func(req *http.Request) (*http.Request, error)) (*http.Response, error) {
+// 创建一个新的http.Client
+// 并且有一个ref可以设置自定义选项然后通过client.Do()来发送请求
+// 将返回原始的http.Response
+func (p *Pixiv) Request(ctx context.Context, method, url string, ref func(c *http.Client, req *http.Request) error) (*http.Response, error) {
 	req, e := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if e != nil {
 		return nil, e
 	}
 
+	cp := *p.c
+	c := &cp
+
 	if ref != nil {
-		req, e = ref(req)
-		if e != nil {
+		if e = ref(c, req); e != nil {
 			return nil, e
 		}
 	}
 
-	return p.c.Do(req)
+	defer c.CloseIdleConnections()
+
+	return c.Do(req)
 }
 
+// 获取图片比特数据
+// 传入图片的URL, 返回图片的比特数据
+// 理论上Pixiv大部分图片都是支持的
 func (p *Pixiv) GetPximg(picURL string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
@@ -46,27 +57,28 @@ func (p *Pixiv) GetPximg(picURL string) ([]byte, error) {
 		return nil, e
 	}
 
-	req, e := p.Request(ctx, "GET", picURL, func(req *http.Request) (*http.Request, error) {
-		req.Header.Set("Referer", fmt.Sprintf("%s://%s",
-			u.Scheme, u.Host))
+	resp, e := p.Request(ctx, "GET", picURL, func(c *http.Client, req *http.Request) error {
+		req.Header.Set("Referer", fmt.Sprintf("%s://%s", u.Scheme, u.Host))
 		req.Header.Set("User-Agent", p.userAgent)
 		req.Header.Set("Accept", "image/webp,image/apng,image/*,*/*;q=0.8")
-		req.Header.Set("Connection", "keep-alive")
+		req.Header.Set("Connection", "close")
 		req.Header.Set("Host", u.Host)
 		req.Header.Set("Upgrade-Insecure-Requests", "1")
 
-		return req, nil
+		return nil
 	})
 
 	if e != nil {
 		return nil, e
 	}
 
-	if req.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server response status code: %d", req.StatusCode)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server response status code: %d", resp.StatusCode)
 	}
 
-	b, e := ioutil.ReadAll(req.Body)
+	b, e := ioutil.ReadAll(resp.Body)
 	if e != nil {
 		return nil, e
 	}
@@ -75,6 +87,8 @@ func (p *Pixiv) GetPximg(picURL string) ([]byte, error) {
 }
 
 // 清除 cookie
+// 将cookiejar中的所有cookie清除
+// 当设置了PHPSESSID时, 可以使用这个方法来清除
 func (p *Pixiv) clearCookies() {
 	p.c.Jar, _ = cookiejar.New(nil)
 }
