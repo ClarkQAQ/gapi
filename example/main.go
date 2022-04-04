@@ -18,7 +18,7 @@ func main() {
 
 	fmt.Println(p.IsLogged())
 
-	b, e := p.GetPximg("https://i.pximg.net/c/250x250_80_a2/custom-thumb/img/2022/03/29/22/23/35/97265461_p0_custom1200.jpg")
+	b, e := p.Pximg("https://i.pximg.net/c/250x250_80_a2/custom-thumb/img/2022/03/29/22/23/35/97265461_p0_custom1200.jpg")
 	if e != nil {
 		panic(e)
 	}

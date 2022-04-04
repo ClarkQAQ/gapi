@@ -13,7 +13,7 @@ func (p *Pixiv) IsLogged() (ret bool, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
 
-	resp, err := p.Request(ctx, http.MethodHead, p.EndpointURL("/setting_user.php", nil).String(), func(c *http.Client, req *http.Request) error {
+	resp, err := p.Request(ctx, http.MethodHead, p.EndpointPATH("/setting_user.php", nil).String(), func(c *http.Client, req *http.Request) error {
 		c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		}

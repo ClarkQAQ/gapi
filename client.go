@@ -11,9 +11,9 @@ import (
 
 // 生成URL
 // 提供Pixiv站点的path和参数返回完整的URL
-func (p *Pixiv) EndpointURL(url string, values url.Values) *url.URL {
+func (p *Pixiv) EndpointPATH(path string, values url.Values) *url.URL {
 	u := *p.pixivURL
-	u.Path = url
+	u.Path = path
 
 	if values != nil {
 		u.RawQuery = values.Encode()
@@ -22,10 +22,25 @@ func (p *Pixiv) EndpointURL(url string, values url.Values) *url.URL {
 	return &u
 }
 
+// 生成URL
+// 提供任意的url和参数返回完整的URL
+func (p *Pixiv) EndpointURL(urlString string, values url.Values) (*url.URL, error) {
+	u, e := url.Parse(urlString)
+	if e != nil {
+		return nil, e
+	}
+
+	if values != nil {
+		u.RawQuery = values.Encode()
+	}
+
+	return u, nil
+}
+
 // 创建一个新的http.Client
 // 并且有一个ref可以设置自定义选项然后通过client.Do()来发送请求
 // 将返回原始的http.Response
-func (p *Pixiv) Request(ctx context.Context, method, url string, ref func(c *http.Client, req *http.Request) error) (*http.Response, error) {
+func (p *Pixiv) Request(ctx context.Context, method, url string, hijack func(c *http.Client, req *http.Request) error) (*http.Response, error) {
 	req, e := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if e != nil {
 		return nil, e
@@ -34,8 +49,8 @@ func (p *Pixiv) Request(ctx context.Context, method, url string, ref func(c *htt
 	cp := *p.c
 	c := &cp
 
-	if ref != nil {
-		if e = ref(c, req); e != nil {
+	if hijack != nil {
+		if e = hijack(c, req); e != nil {
 			return nil, e
 		}
 	}
@@ -48,7 +63,7 @@ func (p *Pixiv) Request(ctx context.Context, method, url string, ref func(c *htt
 // 获取图片比特数据
 // 传入图片的URL, 返回图片的比特数据
 // 理论上Pixiv大部分图片都是支持的
-func (p *Pixiv) GetPximg(picURL string) ([]byte, error) {
+func (p *Pixiv) Pximg(picURL string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
 

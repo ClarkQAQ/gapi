@@ -7,22 +7,34 @@ import (
 
 // Pixiv 接口
 type PixivApi struct {
-	Method  string
-	Path    string
-	Headers http.Header
-	Values  url.Values
-	Body    []byte
-	Error   error
+	Method     string
+	URL        string
+	Headers    http.Header
+	Values     url.Values
+	Body       []byte
+	Error      error
+	Hijack     func(c *http.Client, req *http.Request) error
+	RespHijack func(resp *http.Response, respBody func(b []byte) ([]byte, error)) error
 }
 
 // 新建Pixiv接口
-func NewApi(method string, path string, headers http.Header, values url.Values, body []byte, e error) *PixivApi {
-	return &PixivApi{
+func New(method string, urlString string, headers http.Header, values url.Values, body []byte, e error) *PixivApi {
+	a := &PixivApi{
 		Method:  method,
-		Path:    path,
+		URL:     urlString,
 		Headers: headers,
 		Values:  values,
 		Body:    body,
 		Error:   e,
 	}
+
+	return a
+}
+
+func (a *PixivApi) SetHijack(hijack func(c *http.Client, req *http.Request) error) {
+	a.Hijack = hijack
+}
+
+func (a *PixivApi) SetRespHijack(hijack func(resp *http.Response, respBody func(b []byte) ([]byte, error)) error) {
+	a.RespHijack = hijack
 }
