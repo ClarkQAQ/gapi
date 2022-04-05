@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/proxy"
+	"utilware/dep/x/net/proxy"
 )
 
 // 国区特供代理功能

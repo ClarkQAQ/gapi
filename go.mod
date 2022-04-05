@@ -2,12 +2,6 @@ module gpixiv
 
 go 1.18
 
-require (
-	github.com/tidwall/gjson v1.14.0
-	golang.org/x/net v0.0.0-20220401154927-543a649e0bdd
-)
+replace utilware => github.com/ClarkQAQ/utilware v0.1.0
 
-require (
-	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
-)
+require utilware v0.0.0-00010101000000-000000000000

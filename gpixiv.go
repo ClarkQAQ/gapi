@@ -77,3 +77,15 @@ func (p *Pixiv) SetOptions(opts *Options) error {
 
 	return nil
 }
+
+func (p *Pixiv) Language() string {
+	return p.language
+}
+
+func (p *Pixiv) UserAgent() string {
+	return p.userAgent
+}
+
+func (p *Pixiv) Timeout() time.Duration {
+	return p.timeout
+}
