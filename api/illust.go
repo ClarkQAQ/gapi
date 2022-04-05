@@ -1,9 +1,8 @@
 package api
 
 import (
+	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
 )
 
 // 获取账户的关注动态
@@ -11,22 +10,24 @@ import (
 // mode => 模式 (all, r18)
 // lang => 语言 (zh, en) 或者调用p.Language()
 func FollowIllust(page int, mode string, lang string) *PixivApi {
-	return New("GET", "/ajax/follow_latest/illust", http.Header{
-		"Accept": []string{"application/json; charset=utf-8"},
-	}, url.Values{
-		"p":    {fmt.Sprint(page)},
-		"mode": {mode},
-		"lang": {lang},
-	}, nil, nil)
+	return New("GET", "/ajax/follow_latest/illust").
+		SetHeader("Accept", "application/json; charset=utf-8").
+		SetValue("p", fmt.Sprint(page)).
+		SetValue("mode", mode).
+		SetValue("lang", lang)
 }
 
 // 获取图片列表
 // id => 插图ID/漫画ID
 // lang => 语言 (zh, en) 或者调用p.Language()
 func GetIllust(id int64, lang string) *PixivApi {
-	return New("GET", fmt.Sprintf("/ajax/illust/%d/pages", id), http.Header{
-		"Accept": []string{"application/json; charset=utf-8"},
-	}, url.Values{
-		"lang": {lang},
-	}, nil, nil)
+	a := New("GET", fmt.Sprintf("/ajax/illust/%d/pages", id)).
+		SetHeader("Accept", "application/json; charset=utf-8").
+		SetValue("lang", lang)
+
+	if id <= 0 {
+		a.SetError(errors.New("artwork id must be greater than 0"))
+	}
+
+	return a
 }

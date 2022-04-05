@@ -47,9 +47,14 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
 
-	// 设置请求体
+	// Body
+	var body io.Reader = nil
+	if api.Body != nil {
+		body = bytes.NewReader(api.Body)
+	}
 
-	resp, e := p.Request(ctx, api.Method, u.String(), bytes.NewReader(api.Body), func(c *http.Client, req *http.Request) error {
+	// 设置请求体
+	resp, e := p.Request(ctx, api.Method, u.String(), body, func(c *http.Client, req *http.Request) error {
 		// 设置请求头
 		if api.Headers != nil && len(api.Headers) > 0 {
 			for k, v := range api.Headers {
