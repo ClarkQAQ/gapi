@@ -9,3 +9,5 @@ debug.test
 /example_test.go
 
 /go.sum
+
+*/test/
