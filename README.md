@@ -18,9 +18,9 @@
 ### 上手指南
 
 
-##### 一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gpixiv/tree/master/example/demo)
+#### 一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gpixiv/tree/master/example/demo)
 
-简单的使用方法：
+##### 简单的使用方法：
 
 ```go
 p, e := gpixiv.New(&gpixiv.Options{
@@ -50,6 +50,22 @@ if e != nil {
 }
 
 // 然后resp就是返回的内容了
+```
+
+##### API 自定义插件:
+
+完整测试文件：[Api](https://github.com/ClarkQAQ/gpixiv/tree/master/example/api)
+
+```go
+api.New("GET", fmt.Sprintf("/ajax/illust/%d/pages", 1)).
+SetHeader("Accept", "application/json; charset=utf-8").
+SetValue("lang", "en").
+// RespHijack 拦截响应
+SetRespHijack(func(resp *http.Response, respBody func(b []byte) []byte) error {
+	logger.Info("原始响应状态: %s", resp.Status)
+	respBody([]byte("Hijacked"))
+	return nil
+})
 ```
 
 ### 使用到的框架
