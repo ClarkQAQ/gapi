@@ -47,13 +47,14 @@ func (p *Pixiv) Request(ctx context.Context, method, url string, body io.Reader,
 		return nil, e
 	}
 
-	cp := *p.c
-	c := &cp
+	// cp := *p.c
+	// c := &cp
+	c := p.c
 
 	req.Header.Set(HeaderUserAgent, p.userAgent)
 
 	if hijack != nil {
-		if e = hijack(p.c, req); e != nil {
+		if e = hijack(c, req); e != nil {
 			return nil, e
 		}
 	}
