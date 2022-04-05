@@ -3,6 +3,7 @@ package gpixiv
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -40,8 +41,8 @@ func (p *Pixiv) EndpointURL(urlString string, values url.Values) (*url.URL, erro
 // 创建一个新的http.Client
 // 并且有一个ref可以设置自定义选项然后通过client.Do()来发送请求
 // 将返回原始的http.Response
-func (p *Pixiv) Request(ctx context.Context, method, url string, hijack func(c *http.Client, req *http.Request) error) (*http.Response, error) {
-	req, e := http.NewRequestWithContext(ctx, method, url, nil)
+func (p *Pixiv) Request(ctx context.Context, method, url string, body io.Reader, hijack func(c *http.Client, req *http.Request) error) (*http.Response, error) {
+	req, e := http.NewRequestWithContext(ctx, method, url, body)
 	if e != nil {
 		return nil, e
 	}
@@ -52,7 +53,7 @@ func (p *Pixiv) Request(ctx context.Context, method, url string, hijack func(c *
 	req.Header.Set(HeaderUserAgent, p.userAgent)
 
 	if hijack != nil {
-		if e = hijack(c, req); e != nil {
+		if e = hijack(p.c, req); e != nil {
 			return nil, e
 		}
 	}
@@ -74,11 +75,11 @@ func (p *Pixiv) Pximg(picURL string) ([]byte, error) {
 		return nil, e
 	}
 
-	resp, e := p.Request(ctx, "GET", picURL, func(c *http.Client, req *http.Request) error {
+	resp, e := p.Request(ctx, "GET", picURL, nil, func(c *http.Client, req *http.Request) error {
 		req.Header.Set("Referer", fmt.Sprintf("%s://%s", u.Scheme, u.Host))
 		req.Header.Set("User-Agent", p.userAgent)
 		req.Header.Set("Accept", "image/webp,image/apng,image/*,*/*;q=0.8")
-		req.Header.Set("Connection", "close")
+		req.Header.Set("Connection", "keep-alive")
 		req.Header.Set("Host", u.Host)
 		req.Header.Set("Upgrade-Insecure-Requests", "1")
 

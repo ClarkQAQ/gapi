@@ -80,4 +80,12 @@ const (
 	HeaderXRatelimitLimit        = "X-Ratelimit-Limit"
 	HeaderXRatelimitRemaining    = "X-Ratelimit-Remaining"
 	HeaderXRatelimitReset        = "X-Ratelimit-Reset"
+	HeaderXFronURLEncoded        = "application/x-www-form-urlencoded"
+
+	// User-Agent
+	defaultUserAgent   = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36"
+	IosDeviceUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Mobile/15E148 Safari/604.1"
+
+	// Const
+	defaultLanguage = "zh"
 )

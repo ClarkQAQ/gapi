@@ -18,16 +18,12 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var (
-	ErrStatusNotOk = errors.New("request: status code is not ok (>= 400)")
-	emptyGJSON     = gjson.Result{}
-)
-
 // Pixiv接口返回
 type PixivResponse struct {
 	api     *api.PixivApi
 	raw     *bytes.Buffer
 	content []byte
+	result  *gjson.Result
 
 	*http.Response
 }
@@ -51,7 +47,9 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
 	defer cancel()
 
-	resp, e := p.Request(ctx, api.Method, u.String(), func(c *http.Client, req *http.Request) error {
+	// 设置请求体
+
+	resp, e := p.Request(ctx, api.Method, u.String(), bytes.NewReader(api.Body), func(c *http.Client, req *http.Request) error {
 		// 设置请求头
 		if api.Headers != nil && len(api.Headers) > 0 {
 			for k, v := range api.Headers {
@@ -59,11 +57,6 @@ func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
 					req.Header.Set(k, v[i])
 				}
 			}
-		}
-
-		// 设置请求体
-		if api.Body != nil && len(api.Body) > 0 {
-			req.Body = ioutil.NopCloser(bytes.NewReader(api.Body))
 		}
 
 		// 执行HiJack
@@ -183,19 +176,19 @@ func (r *PixivResponse) JSON(v ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 
-	if !r.OK() {
-		return res, ErrStatusNotOk
-	}
-
 	return res, nil
 }
 
 // 获取JSON响应内容
 // 可以传指针类型的接收者
-func (r *PixivResponse) GJSON(path string) (gjson.Result, error) {
+func (r *PixivResponse) GJSON() (*gjson.Result, error) {
+	if r.result != nil {
+		return r.result, nil
+	}
+
 	b, err := r.Content()
 	if err != nil {
-		return emptyGJSON, err
+		return nil, err
 	}
 
 	if !strings.HasPrefix(r.Header.Get(HeaderContentType), "application/json") {
@@ -203,16 +196,13 @@ func (r *PixivResponse) GJSON(path string) (gjson.Result, error) {
 		if len(b) > 0 {
 			err = string(b)
 		}
-		return emptyGJSON, errors.New(err)
+		return nil, errors.New(err)
 	}
 
-	res := gjson.GetBytes(b, path)
+	res := gjson.ParseBytes(b)
+	r.result = &res
 
-	if !r.OK() {
-		return res, ErrStatusNotOk
-	}
-
-	return res, nil
+	return r.result, nil
 }
 
 // 获取文字响应内容
@@ -221,10 +211,6 @@ func (r *PixivResponse) Text() (string, error) {
 
 	if err != nil {
 		return "", err
-	}
-
-	if !r.OK() {
-		return string(b), ErrStatusNotOk
 	}
 
 	return string(b), nil

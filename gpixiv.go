@@ -7,9 +7,8 @@ import (
 )
 
 var (
-	defaultPixivURL, _ = url.Parse("https://www.pixiv.net")                                                                                    // 默认的pixiv.net的URL
-	defaultTimeout     = time.Second * 15                                                                                                      // 默认的超时时间
-	defaultUserAgent   = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36" // 默认的UserAgent
+	defaultPixivURL, _ = url.Parse("https://www.pixiv.net") // 默认的pixiv.net的URL
+	defaultTimeout     = time.Second * 15                   // 默认的超时时间
 )
 
 // Pixiv 客户端
@@ -18,6 +17,7 @@ type Pixiv struct {
 	pixivURL  *url.URL
 	timeout   time.Duration
 	userAgent string
+	language  string
 }
 
 // 创建客户端选项
@@ -25,6 +25,7 @@ type Options struct {
 	URL       string
 	ProxyURL  string
 	UserAgent string
+	Language  string
 	Timeout   time.Duration
 }
 
@@ -36,16 +37,23 @@ func New(opts *Options) (*Pixiv, error) {
 		pixivURL:  defaultPixivURL,
 		timeout:   defaultTimeout,
 		userAgent: defaultUserAgent,
+		language:  defaultLanguage,
 	}
 
+	p.SetOptions(opts)
+
+	return p, nil
+}
+
+func (p *Pixiv) SetOptions(opts *Options) error {
 	if opts == nil {
-		return p, nil
+		return nil
 	}
 
 	if opts.URL != "" {
 		u, e := url.Parse(opts.URL)
 		if e != nil {
-			return nil, e
+			return e
 		}
 
 		p.pixivURL = u
@@ -63,5 +71,9 @@ func New(opts *Options) (*Pixiv, error) {
 		p.userAgent = opts.UserAgent
 	}
 
-	return p, nil
+	if opts.Language != "" {
+		p.language = opts.Language
+	}
+
+	return nil
 }
