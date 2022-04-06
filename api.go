@@ -1,253 +1,132 @@
 package gpixiv
 
 import (
-	"bytes"
-	"compress/flate"
-	"compress/gzip"
-	"compress/zlib"
-	"context"
-	"encoding/json"
-	"errors"
-	"gpixiv/api"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
-
-	"utilware/gjson"
 )
 
-// Pixiv接口返回
-type PixivResponse struct {
-	api     *api.PixivApi
-	raw     *bytes.Buffer
-	content []byte
-	result  *gjson.Result
-
-	*http.Response
+// Pixiv 接口
+type PixivApi struct {
+	Method     string
+	URL        string
+	Headers    http.Header
+	Values     url.Values
+	Body       []byte
+	Error      error
+	Hijack     func(p *Pixiv, req *http.Request) error
+	RespHijack func(resp *PixivResponse, setBody func(b []byte)) error
 }
 
-// 请求Pixiv接口 (接口需通过api包里面的方法生成)
-func (p *Pixiv) Do(api *api.PixivApi) (presp *PixivResponse, e error) {
-	// 抛出上层API的错误
-	if api.Error != nil {
-		return nil, api.Error
+// 新建Pixiv接口
+func NewAPI(method string, urlString string) *PixivApi {
+	a := &PixivApi{
+		Method:  method,
+		URL:     urlString,
+		Headers: http.Header{},
+		Values:  url.Values{},
 	}
 
-	// 判断是否是URL, 如果是URL就执行URL的方式
-	u := p.EndpointPATH(api.URL, api.Values)
-	if strings.Contains(api.URL, "://") {
-		u, e = p.EndpointURL(api.URL, api.Values)
-		if e != nil {
-			return nil, e
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
-	defer cancel()
-
-	// Body
-	var body io.Reader = nil
-	if api.Body != nil {
-		body = bytes.NewReader(api.Body)
-	}
-
-	// 设置请求体
-	resp, e := p.Request(ctx, api.Method, u.String(), body, func(c *http.Client, req *http.Request) error {
-		// 设置请求头
-		if api.Headers != nil && len(api.Headers) > 0 {
-			for k, v := range api.Headers {
-				for i := 0; i < len(v); i++ {
-					req.Header.Set(k, v[i])
-				}
-			}
-		}
-
-		// 执行HiJack
-		if api.Hijack != nil {
-			if e := api.Hijack(c, req); e != nil {
-				return e
-			}
-		}
-
-		return nil
-	})
-
-	if e != nil {
-		return nil, e
-	}
-
-	presp = &PixivResponse{
-		api:      api,
-		Response: resp,
-	}
-
-	b, e := ioutil.ReadAll(resp.Body)
-	if e != nil {
-		return nil, e
-	}
-
-	presp.raw = bytes.NewBuffer(b)
-	defer resp.Body.Close()
-
-	if api.RespHijack != nil {
-		if e := api.RespHijack(resp, func(body []byte) []byte {
-			if body != nil {
-				presp.raw = bytes.NewBuffer(body)
-			}
-
-			return presp.raw.Bytes()
-		}); e != nil {
-			return nil, e
-		}
-	}
-
-	return presp, nil
+	return a
 }
 
-// 返回原始的响应内容
-// 可以多次调用
-func (r *PixivResponse) Raw() []byte {
-	return r.raw.Bytes()
+// 设置请求前的Hijack
+func (a *PixivApi) SetHijack(hijack func(p *Pixiv, req *http.Request) error) *PixivApi {
+	a.Hijack = hijack
+	return a
 }
 
-// 获取响应内容
-// 会自动解压缩
-func (r *PixivResponse) Content() ([]byte, error) {
-	if r.content != nil {
-		return r.content, nil
-	}
-
-	rawBytes := r.Raw()
-	var reader io.ReadCloser
-	var e error
-
-	switch r.Header.Get(HeaderContentEncoding) {
-	case "gzip":
-		if reader, e = gzip.NewReader(bytes.NewBuffer(r.raw.Bytes())); e != nil {
-			return nil, e
-		}
-	case "deflate":
-		// deflate should be zlib
-		// http://www.gzip.org/zlib/zlib_faq.html#faq38
-		if reader, e = zlib.NewReader(bytes.NewBuffer(r.raw.Bytes())); e != nil {
-			// try RFC 1951 deflate
-			// http: //www.open-open.com/lib/view/open1460866410410.html
-			reader = flate.NewReader(bytes.NewBuffer(r.raw.Bytes()))
-		}
-	}
-
-	if reader == nil {
-		r.content = rawBytes
-		return rawBytes, nil
-	}
-
-	defer reader.Close()
-	b, e := ioutil.ReadAll(reader)
-
-	if e != nil {
-		return nil, e
-	}
-
-	r.content = b
-	return b, nil
+// 设置请求后的Hijack
+func (a *PixivApi) SetRespHijack(hijack func(resp *PixivResponse, setBody func(body []byte)) error) *PixivApi {
+	a.RespHijack = hijack
+	return a
 }
 
-// 获取JSON响应内容
-// 可以传指针类型的接收者
-func (r *PixivResponse) JSON(v ...interface{}) (interface{}, error) {
-	b, err := r.Content()
-	if err != nil {
-		return nil, err
-	}
-
-	if !strings.HasPrefix(r.Header.Get(HeaderContentType), "application/json") {
-		err := r.Status
-		if len(b) > 0 {
-			err = string(b)
-		}
-		return nil, errors.New(err)
-	}
-
-	var res interface{}
-	if len(v) > 0 {
-		res = v[0]
-	} else {
-		res = new(map[string]interface{})
-	}
-
-	if err = json.Unmarshal(b, res); err != nil {
-		return nil, err
-	}
-
-	return res, nil
+// Headers
+// 添加Header
+func (a *PixivApi) AddHeader(key string, value string) *PixivApi {
+	a.Headers.Add(key, value)
+	return a
 }
 
-// 获取JSON响应内容
-// 可以传指针类型的接收者
-func (r *PixivResponse) GJSON() (*gjson.Result, error) {
-	if r.result != nil {
-		return r.result, nil
-	}
-
-	b, err := r.Content()
-	if err != nil {
-		return nil, err
-	}
-
-	if !strings.HasPrefix(r.Header.Get(HeaderContentType), "application/json") {
-		err := r.Status
-		if len(b) > 0 {
-			err = string(b)
-		}
-		return nil, errors.New(err)
-	}
-
-	res := gjson.ParseBytes(b)
-	r.result = &res
-
-	return r.result, nil
+// Headers
+// 设置Header
+func (a *PixivApi) SetHeader(key string, value string) *PixivApi {
+	a.Headers.Set(key, value)
+	return a
 }
 
-// 获取文字响应内容
-func (r *PixivResponse) Text() (string, error) {
-	b, err := r.Content()
-
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
+// Headers
+// 获取Header
+func (a *PixivApi) GetHeader(key string) string {
+	return a.Headers.Get(key)
 }
 
-// 获取最终请求的URL
-func (r *PixivResponse) URL() (*url.URL, error) {
-	u := r.Request.URL
-
-	if r.StatusCode == http.StatusMovedPermanently ||
-		r.StatusCode == http.StatusFound ||
-		r.StatusCode == http.StatusSeeOther ||
-		r.StatusCode == http.StatusTemporaryRedirect {
-		location, err := r.Location()
-
-		if err != nil {
-			return nil, err
-		}
-
-		u = u.ResolveReference(location)
-	}
-
-	return u, nil
+// Headers
+// 获取Headers
+func (a *PixivApi) GetHeaders(key string) []string {
+	return a.Headers.Values(key)
 }
 
-// 获取相应代码的描述
-func (r *PixivResponse) Reason() string {
-	return http.StatusText(r.StatusCode)
+// Headers
+// 删除Header
+func (a *PixivApi) DelHeader(key string) {
+	a.Headers.Del(key)
 }
 
-// 判断响应是否成功
-// 其实就是判断响应状态码是否在100~399之间
-func (r *PixivResponse) OK() bool {
-	return r.StatusCode < 400
+// Values (URL Query)
+// 添加Query
+func (a *PixivApi) AddValue(key string, value string) *PixivApi {
+	a.Values.Set(key, value)
+	return a
+}
+
+// Values (URL Query)
+// 设置Query
+func (a *PixivApi) SetValue(key string, value string) *PixivApi {
+	a.Values.Set(key, value)
+	return a
+}
+
+// Values (URL Query)
+// 获取Query
+func (a *PixivApi) GetValue(key string) string {
+	return a.Values.Get(key)
+}
+
+// Values (URL Query)
+// 是否存在Query
+func (a *PixivApi) HasValue(key string) bool {
+	return a.Values.Has(key)
+}
+
+// Values (URL Query)
+// 删除Query
+func (a *PixivApi) DelValue(key string) {
+	a.Values.Del(key)
+}
+
+// Body
+// 设置请求内容
+func (a *PixivApi) SetBody(body []byte) *PixivApi {
+	a.Body = body
+	return a
+}
+
+// Body
+// 获取请求内容
+func (a *PixivApi) GetBody() []byte {
+	return a.Body
+}
+
+// ERROR
+// 抛出错误
+func (a *PixivApi) SetError(e error) *PixivApi {
+	a.Error = e
+	return a
+}
+
+// ERROR
+// 获取错误
+func (a *PixivApi) GetError() error {
+	return a.Error
 }

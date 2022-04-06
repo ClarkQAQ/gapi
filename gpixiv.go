@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"utilware/cache"
 )
 
 var (
@@ -16,6 +18,7 @@ type Pixiv struct {
 	c         *http.Client
 	pixivURL  *url.URL
 	timeout   time.Duration
+	cache     *cache.Cache
 	userAgent string
 	language  string
 }
@@ -36,10 +39,12 @@ func New(opts *Options) (*Pixiv, error) {
 		c:         &http.Client{},
 		pixivURL:  defaultPixivURL,
 		timeout:   defaultTimeout,
+		cache:     cache.New(5*time.Minute, 10*time.Minute),
 		userAgent: defaultUserAgent,
 		language:  defaultLanguage,
 	}
 
+	p.clearCookies()
 	p.SetOptions(opts)
 
 	return p, nil
@@ -88,4 +93,12 @@ func (p *Pixiv) UserAgent() string {
 
 func (p *Pixiv) Timeout() time.Duration {
 	return p.timeout
+}
+
+func (p *Pixiv) GetURL() *url.URL {
+	return p.pixivURL
+}
+
+func (p *Pixiv) Cache() *cache.Cache {
+	return p.cache
 }

@@ -47,22 +47,21 @@ func (p *Pixiv) Request(ctx context.Context, method, url string, body io.Reader,
 		return nil, e
 	}
 
-	// 好像不能直接隔离
-	// cp := *p.c
-	// c := &cp
-	c := p.c
-
 	req.Header.Set(HeaderUserAgent, p.userAgent)
 
 	if hijack != nil {
-		if e = hijack(c, req); e != nil {
+		if e = hijack(p.c, req); e != nil {
 			return nil, e
 		}
 	}
 
-	defer c.CloseIdleConnections()
+	defer p.c.CloseIdleConnections()
 
-	return c.Do(req)
+	return p.c.Do(req)
+}
+
+func (p *Pixiv) Client() *http.Client {
+	return p.c
 }
 
 // 获取图片比特数据

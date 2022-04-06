@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"gpixiv"
-	"gpixiv/api"
-	"net/http"
 	"utilware/logger"
 )
 
@@ -31,15 +29,15 @@ func main() {
 	logger.Info("Hijack结果: %s", text)
 }
 
-func CustomApi(id int64) *api.PixivApi {
-	a := api.New("GET", fmt.Sprintf("/ajax/illust/%d/pages", id)).
+func CustomApi(id int64) *gpixiv.PixivApi {
+	a := gpixiv.NewAPI("GET", fmt.Sprintf("/ajax/illust/%d/pages", id)).
 		SetHeader("Accept", "application/json; charset=utf-8").
 		SetValue("lang", "en").
 		// RespHijack 拦截响应
-		SetRespHijack(func(resp *http.Response, respBody func(b []byte) []byte) error {
+		SetRespHijack(func(resp *gpixiv.PixivResponse, setBody func(body []byte)) error {
 			logger.Info("原始响应状态: %s", resp.Status)
 
-			respBody([]byte("Hijacked"))
+			setBody([]byte("Hijacked"))
 			return nil
 		})
 
