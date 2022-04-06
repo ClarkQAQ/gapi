@@ -47,6 +47,7 @@ func (p *Pixiv) Request(ctx context.Context, method, url string, body io.Reader,
 		return nil, e
 	}
 
+	// 好像不能直接隔离
 	// cp := *p.c
 	// c := &cp
 	c := p.c
