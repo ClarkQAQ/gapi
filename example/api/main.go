@@ -21,14 +21,7 @@ func main() {
 		logger.Fatal("调用Gapi客户端失败: %s", e.Error())
 	}
 
-	// 输出结果
-	// 无论如何结果都是Hijacked
-	text, e := resp.Text()
-	if e != nil {
-		logger.Fatal("获取响应文本失败: %s", e.Error())
-	}
-
-	logger.Info("Hijack结果: %s", text)
+	logger.Info("Hijack结果: %s", resp.Raw())
 }
 
 func CustomApi(id int64) *gapi.GapiApi {
