@@ -1,1 +1,1 @@
-package gpixiv
+package gapi

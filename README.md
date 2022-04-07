@@ -1,16 +1,15 @@
 <p align="center">
-  <a href="https://github.com/ClarkQAQ/gpixiv">
+  <a href="https://github.com/ClarkQAQ/gapi">
     <img src="images/logo.png" alt="Logo" width="150" height="80">
   </a>
 
-  <h3 align="center">Gpixiv</h3>
+  <h3 align="center">Gapi</h3>
   <p align="center">
-    一个动态插件化可任意扩展的 <code>pixiv.net</code> Golang 通用API框架
+    一个动态插件化可任意扩展的 Golang 通用API框架
     <br />
   </p>
 </p>
 
-> 这架构好像太通用了...有时间可以吧除了api外的东西拆出来当一个通用库...
 
 ## 目录
 
@@ -20,43 +19,35 @@
 ### 上手指南
 
 
-#### 一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gpixiv/tree/master/example/demo)
+#### Pixiv一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gapi/tree/master/example/demo)
 
 ##### 简单的使用方法：
 
 ```go
-p, e := gpixiv.New(&gpixiv.Options{
-	// Pixiv主站地址 不传默认为https://www.pixiv.net
-	// 这里是方便测试或者某些使用镜像站点的情况
-	URL: "https://www.pixiv.net",
+p, e := gapi.New(pixiv.URL, &gapi.Options{
 	// 国内特供代理设置 例如: socks5://127.0.0.1:7891
 	// 如果有帐号密码需要使用BasicAuth, 例如: socks5://admin:admin@127.0.0.1:7891
 	ProxyURL: "socks5://127.0.0.1:7891",
-	// 用户代理 不传默认为"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36"
-	UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36",
-	// 语言 不传默认为"zh"
-	// 可选值: "zh", "en", 其他值可以去官网查看
-	Language: "zh",
 	// 超时时间 不传默认为15秒
 	Timeout: 15 * time.Second,
 })
 if e != nil {
-	logger.Fatal("创建Pixiv客户端失败: %s", e.Error())
+	logger.Fatal("创建Gapi客户端失败: %s", e.Error())
 }
 
-p.SetPHPSESSID(os.Getenv("PIXIV_PHPSESSID"))
+// 设置api定制全局header
+p.SetGHeader(pixiv.GlobalHeader)
 
-resp, e := p.Do(api.FollowIllust(1, "r18", p.Language()))
+resp, e := p.Do(pixiv.CookieLogin(os.Getenv("PIXIV_PHPSESSID")))
 if e != nil {
-	logger.Fatal("获取账户的关注动态失败: %s", e.Error())
+	logger.Fatal("登录失败: %s", e.Error())
 }
-
-// 然后resp就是返回的内容了
+logger.Info("登录成功: %v", string(resp.Raw()))
 ```
 
 ##### API 自定义插件:
 
-完整测试文件：[Api](https://github.com/ClarkQAQ/gpixiv/tree/master/example/api)
+完整测试文件：[Api](https://github.com/ClarkQAQ/gapi/tree/master/example/api)
 
 ```go
 api.New("GET", fmt.Sprintf("/ajax/illust/%d/pages", 1)).

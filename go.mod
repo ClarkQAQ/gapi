@@ -1,4 +1,4 @@
-module gpixiv
+module github.com/ClarkQAQ/gapi
 
 go 1.18
 

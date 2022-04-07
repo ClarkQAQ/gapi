@@ -1,4 +1,4 @@
-package gpixiv
+package gapi
 
 import (
 	"bytes"
@@ -16,10 +16,10 @@ import (
 	"utilware/gjson"
 )
 
-// Pixiv接口返回
-type PixivResponse struct {
-	p       *Pixiv
-	api     *PixivApi
+// Gapi接口返回
+type GapiResponse struct {
+	p       *Gapi
+	api     *GapiApi
 	raw     *bytes.Buffer
 	content []byte
 	result  *gjson.Result
@@ -27,8 +27,8 @@ type PixivResponse struct {
 	*http.Response
 }
 
-// 请求Pixiv接口 (接口需通过api包里面的方法生成)
-func (p *Pixiv) Do(api *PixivApi) (presp *PixivResponse, e error) {
+// 请求Gapi接口 (接口需通过api包里面的方法生成)
+func (p *Gapi) Do(api *GapiApi) (presp *GapiResponse, e error) {
 	// 抛出上层API的错误
 	if api.Error != nil {
 		return nil, api.Error
@@ -77,7 +77,7 @@ func (p *Pixiv) Do(api *PixivApi) (presp *PixivResponse, e error) {
 		return nil, e
 	}
 
-	presp = &PixivResponse{
+	presp = &GapiResponse{
 		p:        p,
 		api:      api,
 		Response: resp,
@@ -104,13 +104,13 @@ func (p *Pixiv) Do(api *PixivApi) (presp *PixivResponse, e error) {
 
 // 返回原始的响应内容
 // 可以多次调用
-func (r *PixivResponse) Raw() []byte {
+func (r *GapiResponse) Raw() []byte {
 	return r.raw.Bytes()
 }
 
 // 获取响应内容
 // 会自动解压缩
-func (r *PixivResponse) Content() ([]byte, error) {
+func (r *GapiResponse) Content() ([]byte, error) {
 	if r.content != nil {
 		return r.content, nil
 	}
@@ -152,7 +152,7 @@ func (r *PixivResponse) Content() ([]byte, error) {
 
 // 获取JSON响应内容
 // 可以传指针类型的接收者
-func (r *PixivResponse) JSON(v ...interface{}) (interface{}, error) {
+func (r *GapiResponse) JSON(v ...interface{}) (interface{}, error) {
 	b, err := r.Content()
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (r *PixivResponse) JSON(v ...interface{}) (interface{}, error) {
 
 // 获取JSON响应内容
 // 可以传指针类型的接收者
-func (r *PixivResponse) GJSON() (*gjson.Result, error) {
+func (r *GapiResponse) GJSON() (*gjson.Result, error) {
 	if r.result != nil {
 		return r.result, nil
 	}
@@ -207,7 +207,7 @@ func (r *PixivResponse) GJSON() (*gjson.Result, error) {
 }
 
 // 获取文字响应内容
-func (r *PixivResponse) Text() (string, error) {
+func (r *GapiResponse) Text() (string, error) {
 	b, err := r.Content()
 
 	if err != nil {
@@ -218,7 +218,7 @@ func (r *PixivResponse) Text() (string, error) {
 }
 
 // 获取最终请求的URL
-func (r *PixivResponse) URL() (*url.URL, error) {
+func (r *GapiResponse) URL() (*url.URL, error) {
 	u := r.Request.URL
 
 	if r.StatusCode == http.StatusMovedPermanently ||
@@ -238,16 +238,16 @@ func (r *PixivResponse) URL() (*url.URL, error) {
 }
 
 // 获取相应代码的描述
-func (r *PixivResponse) Reason() string {
+func (r *GapiResponse) Reason() string {
 	return http.StatusText(r.StatusCode)
 }
 
 // 判断响应是否成功
 // 其实就是判断响应状态码是否在100~399之间
-func (r *PixivResponse) OK() bool {
+func (r *GapiResponse) OK() bool {
 	return r.StatusCode < 400
 }
 
-func (r *PixivResponse) Pixiv() *Pixiv {
+func (r *GapiResponse) Gapi() *Gapi {
 	return r.p
 }

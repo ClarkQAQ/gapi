@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"gpixiv"
-	"gpixiv/api"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -11,28 +9,26 @@ import (
 	"time"
 	"utilware/logger"
 
+	"github.com/ClarkQAQ/gapi"
+	"github.com/ClarkQAQ/gapi/pixiv"
+
 	"utilware/gjson"
 )
 
 func main() {
-	p, e := gpixiv.New(&gpixiv.Options{
-		// Pixiv主站地址 不传默认为https://www.pixiv.net
-		// 这里是方便测试或者某些使用镜像站点的情况
-		URL: "https://www.pixiv.net",
+	p, e := gapi.New(pixiv.URL, &gapi.Options{
 		// 国内特供代理设置 例如: socks5://127.0.0.1:7891
 		// 如果有帐号密码需要使用BasicAuth, 例如: socks5://admin:admin@127.0.0.1:7891
 		ProxyURL: "socks5://127.0.0.1:7891",
-		// 用户代理 不传默认为"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36"
-		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36",
-		// 语言 不传默认为"zh"
-		// 可选值: "zh", "en", 其他值可以去官网查看
-		Language: "zh",
 		// 超时时间 不传默认为15秒
 		Timeout: 15 * time.Second,
 	})
 	if e != nil {
-		logger.Fatal("创建Pixiv客户端失败: %s", e.Error())
+		logger.Fatal("创建Gapi客户端失败: %s", e.Error())
 	}
+
+	// 设置api定制全局header
+	p.SetGHeader(pixiv.GlobalHeader)
 
 	// 鉴权 (没有登录无法查看R18作品)
 
@@ -45,25 +41,15 @@ func main() {
 	// 手动设置网页SESSID
 	// 登录进pixiv.net然后F12到应用或者存储页面获取SESSID
 	// 这里是读取环境变量的方式, 你可以直接调用p.SetPHPSESSID("xxx")来设置SESSID
-	p.SetPHPSESSID(os.Getenv("PIXIV_PHPSESSID"))
-
-	// 检查是否登录....
-	// 目前是通过获取用户动态来判断, 后面再换其他API
-	// setting.php 好像加了密罐或者干扰, 有时未登录也会返回正常的数据
-	isLogged, e := p.IsLogged()
+	resp, e := p.Do(pixiv.CookieLogin(os.Getenv("PIXIV_PHPSESSID")))
 	if e != nil {
-		logger.Fatal("检查登录状态失败: %s", e.Error())
+		logger.Fatal("登录失败: %s", e.Error())
 	}
 
-	// Bool类型的返回值, 可以直接使用
-	logger.Info("是否登录: %v", isLogged)
-
-	if !isLogged {
-		logger.Fatal("未登录, 请先登录!")
-	}
+	logger.Info("登录成功: %v", string(resp.Raw()))
 
 	// 获取账户的关注动态, 并过滤仅R18的动态
-	resp, e := p.Do(api.FollowIllust(1, "r18", p.Language()))
+	resp, e = p.Do(pixiv.FollowIllust(1, "r18", ""))
 	if e != nil {
 		logger.Fatal("获取账户的关注动态失败: %s", e.Error())
 	}
@@ -92,7 +78,7 @@ func main() {
 		logger.Info("图片数: %d", artworkPageCount)
 
 		// 获取作品详细的图片列表
-		resp, e := p.Do(api.GetIllust(artworkId, p.Language()))
+		resp, e := p.Do(pixiv.GetIllust(artworkId, ""))
 		if e != nil {
 			logger.Warn("获取作品编号: %d 详细的图片列表失败: %s", artworkId, e.Error())
 			return true
@@ -119,20 +105,20 @@ func main() {
 			logger.Info("编号: %d 原图图片地址: %s", artworkId, u.String())
 
 			// 调用下载图片的函数下载图片
-			b, e := p.Pximg(u.String())
+			b, e := p.Do(pixiv.Pximg(u.String()))
 			if e != nil {
 				logger.Warn("编号: %d 图片URL: %s 下载失败: %s", artworkId, u.String(), e.Error())
 				return true
 			}
 
 			// 为每个artwork单独保存一个文件夹, 然后生成文件名
-			picPath := filepath.Join("test", fmt.Sprint(artworkId), filepath.Base(u.Path))
+			picPath := filepath.Join("test", fmt.Sprintf("%d_%s", artworkId, filepath.Base(u.Path)))
 			// 创建文件夹, 在Windows可能会触发UAC
 			if e := os.MkdirAll(filepath.Dir(picPath), os.ModePerm); e != nil {
 				logger.Fatal("创建文件夹失败: %s", e.Error())
 			}
 
-			if e := ioutil.WriteFile(picPath, b, os.ModePerm); e != nil {
+			if e := ioutil.WriteFile(picPath, b.Raw(), os.ModePerm); e != nil {
 				logger.Fatal("编号: %d 图片URL: %s 保存失败(请确认是否有权限或者其他问题): %s", artworkId, artworkPicUrl, e.Error())
 				return true
 			}

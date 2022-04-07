@@ -1,13 +1,25 @@
-package api
+package pixiv
 
 import (
 	"errors"
 	"fmt"
-	"gpixiv"
+	"net/http"
 	"time"
+
+	"github.com/ClarkQAQ/gapi"
 )
 
-func CheckPHPSESSID(p *gpixiv.Pixiv) error {
+const (
+	URL = "https://www.pixiv.net"
+)
+
+var (
+	GlobalHeader = http.Header{
+		"User-Agent": {gapi.DefaultUserAgent},
+	}
+)
+
+func CheckPHPSESSID(p *gapi.Gapi) error {
 	for _, v := range p.Client().Jar.Cookies(p.GetURL()) {
 		if v.Name == "PHPSESSID" {
 			return nil
@@ -17,7 +29,7 @@ func CheckPHPSESSID(p *gpixiv.Pixiv) error {
 	return errors.New("this api require PHPSESSID")
 }
 
-func GetCsrfTokenString(p *gpixiv.Pixiv) (string, error) {
+func GetCsrfTokenString(p *gapi.Gapi) (string, error) {
 	if v, ok := p.Cache().Get("csrf_token"); ok {
 		return fmt.Sprint(v), nil
 	}
