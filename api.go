@@ -56,6 +56,15 @@ func (a *GapiApi) SetHeader(key string, value string) *GapiApi {
 }
 
 // Headers
+// 设置Headers
+func (a *GapiApi) SetHeaders(value map[string]string) *GapiApi {
+	for k, v := range value {
+		a.SetHeader(k, v)
+	}
+	return a
+}
+
+// Headers
 // 获取Header
 func (a *GapiApi) GetHeader(key string) string {
 	return a.Headers.Get(key)
@@ -84,6 +93,15 @@ func (a *GapiApi) AddValue(key string, value string) *GapiApi {
 // 设置Query
 func (a *GapiApi) SetValue(key string, value string) *GapiApi {
 	a.Values.Set(key, value)
+	return a
+}
+
+// Values (URL Query)
+// 设置Querys
+func (a *GapiApi) SetValues(values map[string]string) *GapiApi {
+	for k, v := range values {
+		a.Values.Set(k, v)
+	}
 	return a
 }
 

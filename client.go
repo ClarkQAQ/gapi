@@ -46,8 +46,12 @@ func (p *Gapi) Request(ctx context.Context, method, url string, body io.Reader, 
 	}
 
 	p.gHeaderLock.RLock()
-	req.Header = p.gHeader
+	for k, v := range p.gHeader {
+		req.Header[k] = v
+	}
 	p.gHeaderLock.RUnlock()
+
+	// logger.Info("%+v", req)
 
 	if hijack != nil {
 		if e = hijack(p.c, req); e != nil {

@@ -10,7 +10,7 @@ import (
 	"utilware/logger"
 
 	"github.com/ClarkQAQ/gapi"
-	"github.com/ClarkQAQ/gapi/pixiv"
+	"github.com/ClarkQAQ/gapi/apis/pixiv"
 
 	"utilware/gjson"
 )

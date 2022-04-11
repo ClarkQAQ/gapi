@@ -7,10 +7,71 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 	"utilware/goquery"
 
 	"github.com/ClarkQAQ/gapi"
 )
+
+// 获取收藏artwork/获取bookmark
+// tag => 插画/漫画收藏标签
+// rest => 	show:公开模式/hide:非公开模式
+// lang => 返回语言
+// offset => 偏移数量
+// limit => 每页数量
+func BookmarkList(tag string, rest string, lang string, offset int64, limit int64) *gapi.GapiApi {
+	a := gapi.NewAPI("GET", "").
+		SetValues(map[string]string{
+			"tag":    tag,
+			"offset": fmt.Sprintf("%d", offset),
+			"limit":  fmt.Sprintf("%d", limit),
+			"rest":   rest,
+			"lang":   lang,
+		}).
+		SetHeader(gapi.HeaderAccept, "application/json")
+
+	a.SetHijack(func(p *gapi.Gapi, req *http.Request) error {
+		userId, ok := p.Cache().Get("user_id")
+		if !ok || userId == nil {
+			resp, e := p.Do(GetUserInfo())
+			if e != nil {
+				return fmt.Errorf("get user info: %s", e.Error())
+			}
+
+			userInfo := GetUserInfoData{}
+			if _, e := resp.JSON(&userInfo); e != nil {
+				return fmt.Errorf("parse user info: %s", e.Error())
+			}
+
+			userId = userInfo.Id
+
+			p.Cache().Set("user_id", userId, time.Minute*30)
+		}
+
+		req.URL.Path = fmt.Sprintf("/ajax/user/%v/illusts/bookmarks", userId)
+		return nil
+	})
+
+	a.SetRespHijack(func(resp *gapi.GapiResponse, setBody func(body []byte)) error {
+		g, e := resp.GJSON()
+		if e != nil {
+			return fmt.Errorf("parse json: %s", e.Error())
+		}
+
+		if !g.Get("error").Exists() {
+			return errors.New("response content error")
+		}
+
+		if g.Get("error").Bool() {
+			return fmt.Errorf("response error: %s", g.Get("message").String())
+		}
+
+		setBody([]byte(g.Get("body").Raw))
+		return nil
+	})
+
+	return a
+}
 
 // 收藏artwork/添加bookmark
 // illust_id => 插画/漫画编号
@@ -82,7 +143,7 @@ func DeleteBookmark(illust_id int64) *gapi.GapiApi {
 	a := gapi.NewAPI("GET", "/bookmark_add.php").
 		SetValue("type", "illust").
 		SetValue("illust_id", fmt.Sprint(illust_id)).
-		SetHeader(gapi.HeaderAccept, "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/jxl,image/webp,*/*;q=0.8")
+		SetHeader(gapi.HeaderAccept, "text/html")
 
 	a.SetRespHijack(func(resp *gapi.GapiResponse, setBody func(body []byte)) error {
 		if resp.StatusCode != 200 {

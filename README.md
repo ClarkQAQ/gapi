@@ -1,8 +1,4 @@
 <p align="center">
-  <a href="https://github.com/ClarkQAQ/gapi">
-    <img src="images/logo.png" alt="Logo" width="150" height="80">
-  </a>
-
   <h3 align="center">Gapi</h3>
   <p align="center">
     一个动态插件化可任意扩展的 Golang 通用API框架
@@ -19,7 +15,7 @@
 ### 上手指南
 
 
-#### Pixiv一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gapi/tree/master/example/demo)
+#### Pixiv一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gapi/tree/master/example/pixiv_demo)
 
 ##### 简单的使用方法：
 

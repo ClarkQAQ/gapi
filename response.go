@@ -94,6 +94,8 @@ func (p *Gapi) Do(api *GapiApi) (presp *GapiResponse, e error) {
 	if api.RespHijack != nil {
 		if e := api.RespHijack(presp, func(body []byte) {
 			presp.raw = bytes.NewBuffer(body)
+			presp.content = nil
+			presp.result = nil
 		}); e != nil {
 			return nil, e
 		}

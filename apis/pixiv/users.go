@@ -17,6 +17,10 @@ func CookieLogin(phpsessid string) *gapi.GapiApi {
 	a := gapi.NewAPI("HEAD", "/touch/ajax/follow/latest").
 		SetHeader("Accept", "application/json; charset=utf-8").
 		SetHijack(func(p *gapi.Gapi, req *http.Request) error {
+			if phpsessid == "" {
+				return fmt.Errorf("phpsessid is empty")
+			}
+
 			p.ClearCookies()
 			p.Client().Jar.SetCookies(req.URL, []*http.Cookie{{
 				Domain: "." + p.GetURL().Host,
