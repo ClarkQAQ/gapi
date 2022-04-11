@@ -15,6 +15,8 @@
 ### 上手指南
 
 
+> 目前只有pixiv和城市通(鹤山在线招聘)的一部分API接口, 下一个是nhentai的API接口, 如果需要其他接口可以提issue或者自己添加....不需要公开也能调用(详情: [自定义接口](#自定义API))
+
 #### Pixiv一百行代码的一步到位演示文件：[Demo](https://github.com/ClarkQAQ/gapi/tree/master/example/pixiv_demo)
 
 ##### 简单的使用方法：
@@ -41,7 +43,7 @@ if e != nil {
 logger.Info("登录成功: %v", string(resp.Raw()))
 ```
 
-##### API 自定义插件:
+##### 自定义API:
 
 完整测试文件：[Api](https://github.com/ClarkQAQ/gapi/tree/master/example/api)
 
@@ -61,6 +63,7 @@ SetRespHijack(func(resp *http.Response, respBody func(b []byte) []byte) error {
 
 - [gjson](https://github.com/tidwall/gjson)
 - [utilware/logger](https://github.com/ClarkQAQ/utilware)
+- [goquery] (https://github.com/PuerkitoBio/goquery)
 
 ### 版权说明
 
