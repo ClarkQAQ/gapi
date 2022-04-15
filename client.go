@@ -6,15 +6,16 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strings"
 )
 
 // 生成URL
 // 提供Gapi站点的path和参数返回完整的URL
 func (p *Gapi) EndpointPATH(path string, values url.Values) *url.URL {
 	u := *p.siteURL
-	u.Path = path
+	u.Path, u.RawQuery, _ = strings.Cut(path, "?")
 
-	if values != nil {
+	if values != nil && len(values) > 0 {
 		u.RawQuery = values.Encode()
 	}
 
@@ -29,7 +30,7 @@ func (p *Gapi) EndpointURL(urlString string, values url.Values) (*url.URL, error
 		return nil, e
 	}
 
-	if values != nil {
+	if values != nil && len(values) > 0 {
 		u.RawQuery = values.Encode()
 	}
 
